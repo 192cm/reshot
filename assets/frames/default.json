@@ -1,0 +1,27 @@
+{
+  "id": "default",
+  "canvas": {
+    "width": 1200,
+    "height": 1854,
+    "background": "#000000"
+  },
+  "logo": {
+    "src": "assets/frames/mpnu-logo.png",
+    "x": 420,
+    "y": 48,
+    "width": 360,
+    "height": 170,
+    "fit": "contain"
+  },
+  "slots": [
+    { "key": "old_1", "x": 76, "y": 251, "width": 518, "height": 744 },
+    { "key": "current_1", "x": 628, "y": 251, "width": 518, "height": 744 },
+    { "key": "current_2", "x": 76, "y": 1017, "width": 518, "height": 744 },
+    { "key": "old_2", "x": 628, "y": 1017, "width": 518, "height": 744 }
+  ],
+  "overlay": "assets/frames/default_overlay.png",
+  "output": {
+    "format": "jpg",
+    "quality": 92
+  }
+}

@@ -1,0 +1,1 @@
+"""Nikon camera adapter placeholder."""

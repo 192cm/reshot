@@ -10,6 +10,8 @@ from PIL import Image, ImageDraw
 from app.image.templates import resolve_project_path
 
 
+MAX_CAPTURE_SLOTS = 8
+
 DUMMY_SOURCES = {
     1: [
         "assets/dummy-captures/sample_1.jpg",
@@ -26,8 +28,17 @@ DUMMY_SOURCES = {
 
 def _create_fallback_image(path: Path, slot: int) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    palette = {1: "#305f72", 2: "#7a3f46"}
-    size = (1400, 1000) if slot == 1 else (1000, 1400)
+    palette = {
+        1: "#305f72",
+        2: "#7a3f46",
+        3: "#5c6c56",
+        4: "#8a6f3d",
+        5: "#475a7a",
+        6: "#7a4f2f",
+        7: "#5f4a7a",
+        8: "#2f6c68",
+    }
+    size = (1400, 1000) if slot % 2 else (1000, 1400)
     image = Image.new("RGB", size, palette[slot])
     draw = ImageDraw.Draw(image)
     margin = 48
@@ -43,11 +54,11 @@ def _create_fallback_image(path: Path, slot: int) -> None:
 
 
 def capture_dummy(slot: int, destination: Path) -> Path:
-    if slot not in (1, 2):
-        raise ValueError("slot must be 1 or 2.")
+    if slot < 1 or slot > MAX_CAPTURE_SLOTS:
+        raise ValueError(f"slot must be 1 to {MAX_CAPTURE_SLOTS}.")
 
     destination.parent.mkdir(parents=True, exist_ok=True)
-    for relative_source in DUMMY_SOURCES[slot]:
+    for relative_source in DUMMY_SOURCES.get(slot, []):
         source = resolve_project_path(relative_source)
         if source.exists():
             shutil.copyfile(source, destination)

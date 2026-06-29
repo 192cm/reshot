@@ -3,6 +3,8 @@ const defaultApiBaseUrl = "http://localhost:8000";
 export const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? defaultApiBaseUrl;
 
+export type CaptureSlot = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
 export type HealthResponse = {
   app: string;
   status: string;
@@ -64,7 +66,7 @@ export async function getSession(sessionId: string): Promise<SessionMetadata> {
 
 export async function capturePhoto(
   sessionId: string,
-  slot: 1 | 2,
+  slot: CaptureSlot,
 ): Promise<SessionMetadata> {
   const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/capture`, {
     method: "POST",
@@ -75,11 +77,17 @@ export async function capturePhoto(
   return readJson<SessionMetadata>(response);
 }
 
-export async function composeSession(sessionId: string): Promise<SessionMetadata> {
+export async function composeSession(
+  sessionId: string,
+  selectedCaptureSlots: CaptureSlot[],
+): Promise<SessionMetadata> {
   const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/compose`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ template_id: "default" }),
+    body: JSON.stringify({
+      template_id: "default",
+      selected_capture_slots: selectedCaptureSlots,
+    }),
   });
 
   return readJson<SessionMetadata>(response);
@@ -93,10 +101,6 @@ export function sessionQrUrl(sessionId: string): string {
   return `${apiBaseUrl}/sessions/${sessionId}/qr`;
 }
 
-export function sessionCaptureUrl(sessionId: string, slot: 1 | 2): string {
+export function sessionCaptureUrl(sessionId: string, slot: CaptureSlot): string {
   return `${apiBaseUrl}/sessions/${sessionId}/capture/${slot}`;
-}
-
-export function oldPhotoUrl(slot: 1 | 2): string {
-  return `${apiBaseUrl}/old-photos/${slot}`;
 }

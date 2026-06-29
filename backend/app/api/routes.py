@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.core.config import get_settings
+from app.image.templates import resolve_project_path
 from app.models.session import SessionMetadata
 from app.services.camera_service import (
     InvalidCaptureSlotError,
@@ -21,17 +22,17 @@ from app.services.session_service import (
     SessionImageNotFoundError,
     SessionMetadataError,
     SessionNotFoundError,
-    get_final_image_for_session,
     create_session,
+    get_final_image_for_session,
     read_session_metadata,
 )
-from app.image.templates import resolve_project_path
 
 router = APIRouter()
 
 
 class ComposeRequest(BaseModel):
     template_id: str = "default"
+    selected_capture_slots: list[int] | None = None
 
 
 class CreateSessionRequest(BaseModel):
@@ -43,7 +44,7 @@ class CaptureRequest(BaseModel):
 
 
 def _session_error_to_http(exc: Exception) -> HTTPException:
-    if isinstance(exc, (InvalidSessionIdError, InvalidCaptureSlotError)):
+    if isinstance(exc, (InvalidSessionIdError, InvalidCaptureSlotError, ValueError)):
         return HTTPException(status_code=400, detail=str(exc))
     if isinstance(
         exc,
@@ -177,7 +178,12 @@ def compose_session_endpoint(
 ) -> SessionMetadata:
     try:
         template_id = request.template_id if request else "default"
-        compose_session(session_id=session_id, template_id=template_id)
+        selected_capture_slots = request.selected_capture_slots if request else None
+        compose_session(
+            session_id=session_id,
+            template_id=template_id,
+            selected_capture_slots=selected_capture_slots,
+        )
         generate_session_qr(session_id)
         return read_session_metadata(session_id)
     except Exception as exc:

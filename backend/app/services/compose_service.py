@@ -1,4 +1,4 @@
-"""Image composition service for the Phase 2 2x2 output."""
+"""Image composition service for the 4-photo output."""
 
 from __future__ import annotations
 
@@ -28,6 +28,21 @@ def default_photo_paths(session_id: str) -> dict[str, Path]:
 
 def default_output_path(session_id: str) -> Path:
     return resolve_project_path(f"output/sessions/{session_id}/final.jpg")
+
+
+def selected_capture_photo_paths(session_id: str, capture_slots: list[int]) -> dict[str, Path]:
+    if len(capture_slots) != 4:
+        raise ValueError("Exactly 4 capture slots must be selected.")
+    if len(set(capture_slots)) != 4:
+        raise ValueError("Selected capture slots must be unique.")
+    if any(slot < 1 or slot > 8 for slot in capture_slots):
+        raise ValueError("Selected capture slots must be 1 to 8.")
+
+    frame_keys = ["old_1", "current_1", "current_2", "old_2"]
+    return {
+        frame_key: resolve_project_path(f"captures/{session_id}/current_{capture_slot}.jpg")
+        for frame_key, capture_slot in zip(frame_keys, capture_slots)
+    }
 
 
 def _paste_image(canvas: Image.Image, image: Image.Image, box: ImageBox) -> None:
@@ -66,14 +81,19 @@ def _paste_overlay(canvas: Image.Image, overlay_path: Path) -> None:
 def compose_session(
     session_id: str,
     template_id: str = "default",
+    selected_capture_slots: list[int] | None = None,
     photo_paths: dict[str, Path | str] | None = None,
     output_path: Path | str | None = None,
 ) -> Path:
-    from app.services.session_service import validate_session_id
+    from app.services.session_service import validate_session_id, write_session_metadata
 
     session_id = validate_session_id(session_id)
     template = load_template(template_id)
-    resolved_photos = default_photo_paths(session_id)
+    resolved_photos = (
+        selected_capture_photo_paths(session_id, selected_capture_slots)
+        if selected_capture_slots
+        else default_photo_paths(session_id)
+    )
     if photo_paths:
         resolved_photos.update(
             {key: resolve_project_path(path) for key, path in photo_paths.items()}
@@ -109,20 +129,16 @@ def compose_session(
 
     canvas.save(final_path, format="JPEG", quality=template.output.quality)
 
-    from app.services.session_service import write_session_metadata
-
     write_session_metadata(
         session_id,
         status="composed",
         template_id=template_id,
         final_image=final_path,
-        old_photos=[
-            DEFAULT_OLD_PHOTOS["old_1"],
-            DEFAULT_OLD_PHOTOS["old_2"],
-        ],
+        old_photos=[],
         captures=[
-            f"captures/{session_id}/current_1.jpg",
-            f"captures/{session_id}/current_2.jpg",
+            f"captures/{session_id}/current_{slot}.jpg"
+            for slot in range(1, 9)
+            if resolve_project_path(f"captures/{session_id}/current_{slot}.jpg").exists()
         ],
     )
     return final_path

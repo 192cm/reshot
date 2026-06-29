@@ -13,7 +13,7 @@ from pydantic import ValidationError
 
 from app.image.templates import PROJECT_ROOT, resolve_project_path
 from app.models.session import SessionMetadata
-from app.services.compose_service import DEFAULT_OLD_PHOTOS, default_output_path, default_photo_paths
+from app.services.compose_service import DEFAULT_OLD_PHOTOS, default_output_path
 
 
 SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
@@ -80,11 +80,7 @@ def generate_session_id() -> str:
 
 
 def _default_captures(session_id: str) -> list[str]:
-    paths = default_photo_paths(session_id)
-    return [
-        project_relative(paths["current_1"]),
-        project_relative(paths["current_2"]),
-    ]
+    return []
 
 
 def _default_old_photos() -> list[str]:
@@ -114,8 +110,8 @@ def build_session_metadata(
         template_id=template_id,
         final_image_path=project_relative(final_image or final_image_path(safe_session_id)),
         qr_image_path=existing.qr_image_path if existing else None,
-        old_photos=old_photos or _default_old_photos(),
-        captures=captures or _default_captures(safe_session_id),
+        old_photos=_default_old_photos() if old_photos is None else old_photos,
+        captures=_default_captures(safe_session_id) if captures is None else captures,
     )
 
 

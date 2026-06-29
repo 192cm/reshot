@@ -1,4 +1,4 @@
-"""Camera integration service for Phase 5 capture requests."""
+"""Camera integration service for capture requests."""
 
 from __future__ import annotations
 
@@ -23,13 +23,16 @@ class InvalidCaptureSlotError(ValueError):
 
 
 class UnsupportedCameraModeError(ValueError):
-    """Raised when the configured camera mode is outside Phase 5 scope."""
+    """Raised when the configured camera mode is outside the current scope."""
+
+
+MAX_CAPTURE_SLOTS = 8
 
 
 def capture_path(session_id: str, slot: int) -> Path:
     safe_session_id = validate_session_id(session_id)
-    if slot not in (1, 2):
-        raise InvalidCaptureSlotError("slot must be 1 or 2.")
+    if slot < 1 or slot > MAX_CAPTURE_SLOTS:
+        raise InvalidCaptureSlotError(f"slot must be 1 to {MAX_CAPTURE_SLOTS}.")
 
     path = (PROJECT_ROOT / "captures" / safe_session_id / f"current_{slot}.jpg").resolve()
     captures_root = (PROJECT_ROOT / "captures").resolve()
@@ -45,21 +48,25 @@ def capture_session_photo(session_id: str, slot: int) -> SessionMetadata:
     settings = get_settings()
     if settings.camera_mode != "dummy":
         raise UnsupportedCameraModeError(
-            f"CAMERA_MODE={settings.camera_mode} is not implemented in Phase 5."
+            f"CAMERA_MODE={settings.camera_mode} is not implemented yet."
         )
 
     capture_dummy(slot, destination)
 
     captured_slots = [
         index
-        for index in (1, 2)
+        for index in range(1, MAX_CAPTURE_SLOTS + 1)
         if capture_path(metadata.session_id, index).exists()
     ]
-    status = "ready_to_compose" if len(captured_slots) == 2 else f"captured_{slot}"
+    status = "ready_to_select" if len(captured_slots) == MAX_CAPTURE_SLOTS else f"captured_{slot}"
     updated = metadata.model_copy(
         update={
             "status": status,
             "updated_at": datetime.now(timezone.utc),
+            "captures": [
+                f"captures/{metadata.session_id}/current_{index}.jpg"
+                for index in captured_slots
+            ],
         }
     )
     return save_session_metadata(updated)

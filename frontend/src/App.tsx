@@ -6,12 +6,13 @@ import {
   getSession,
   sessionImageUrl,
   sessionQrUrl,
+  type CaptureSlot,
   type SessionMetadata,
 } from "./api/client";
 import { PhotoStripPreview } from "./components/PhotoStripPreview";
 import { QrPanel } from "./components/QrPanel";
 
-type BusyAction = "session" | "capture1" | "capture2" | "compose" | null;
+type BusyAction = "session" | "capture" | "compose" | null;
 type PageState =
   | { name: "start" }
   | { name: "capture" }
@@ -50,6 +51,7 @@ export default function App() {
   const [page, setPage] = useState<PageState>(() => getPageFromLocation());
   const [session, setSession] = useState<SessionMetadata | null>(null);
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
+  const [busySlot, setBusySlot] = useState<CaptureSlot | null>(null);
   const [countdownValue, setCountdownValue] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const autoCreatingSession = useRef(false);
@@ -91,9 +93,6 @@ export default function App() {
       });
   }, [page.name, session]);
 
-  const busy = busyAction !== null;
-  const busySlot = busyAction === "capture1" ? 1 : busyAction === "capture2" ? 2 : null;
-
   async function runCountdown() {
     for (const value of [7, 6, 5, 4, 3, 2, 1]) {
       setCountdownValue(value);
@@ -105,34 +104,53 @@ export default function App() {
   const goHome = () => {
     setSession(null);
     setError(null);
+    setBusyAction(null);
+    setBusySlot(null);
     pushPage({ name: "start" });
     setPage({ name: "start" });
   };
 
-  async function captureSlot(slot: 1 | 2) {
-    if (!session || busy) {
+  async function captureSlot(startSlot: CaptureSlot) {
+    if (!session || busyAction !== null) {
       return;
     }
 
     setError(null);
-    setBusyAction(slot === 1 ? "capture1" : "capture2");
+    setBusyAction("capture");
     try {
-      await runCountdown();
-      const capturedSession = await capturePhoto(session.session_id, slot);
-      setSession(capturedSession);
-
-      if (slot === 2) {
-        setBusyAction("compose");
-        const composedSession = await composeSession(capturedSession.session_id);
-        setSession(composedSession);
-        const resultPage = { name: "result", sessionId: composedSession.session_id } as const;
-        pushPage(resultPage);
-        setPage(resultPage);
+      let currentSession = session;
+      for (let slot = startSlot; slot <= 8; slot += 1) {
+        const captureSlot = slot as CaptureSlot;
+        setBusySlot(captureSlot);
+        await runCountdown();
+        currentSession = await capturePhoto(currentSession.session_id, captureSlot);
+        setSession(currentSession);
       }
     } catch (error: unknown) {
       setError(getErrorMessage(error));
     } finally {
       setCountdownValue(null);
+      setBusySlot(null);
+      setBusyAction(null);
+    }
+  }
+
+  async function saveFinal(selectedCaptureSlots: CaptureSlot[]) {
+    if (!session || busyAction !== null) {
+      return;
+    }
+
+    setError(null);
+    setBusyAction("compose");
+    try {
+      const composedSession = await composeSession(session.session_id, selectedCaptureSlots);
+      setSession(composedSession);
+      const resultPage = { name: "result", sessionId: composedSession.session_id } as const;
+      pushPage(resultPage);
+      setPage(resultPage);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
+    } finally {
       setBusyAction(null);
     }
   }
@@ -183,7 +201,9 @@ export default function App() {
               session={session}
               busySlot={busySlot}
               countdownValue={countdownValue}
+              isComposing={busyAction === "compose"}
               onCapture={captureSlot}
+              onCompose={saveFinal}
             />
             {(busyAction === "session" || busyAction === "compose") && (
               <div className="capture-overlay" aria-live="polite">
@@ -201,11 +221,6 @@ export default function App() {
               onGoHome={goHome}
               qrUrl={`${sessionQrUrl(resultSession.session_id)}?t=${resultSession.updated_at}`}
             />
-            <div className="result-actions">
-              <button type="button" onClick={goHome}>
-                Go to start
-              </button>
-            </div>
           </>
         )}
 

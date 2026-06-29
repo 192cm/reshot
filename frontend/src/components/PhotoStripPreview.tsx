@@ -1,121 +1,167 @@
+import { useState } from "react";
 import {
-  oldPhotoUrl,
   sessionCaptureUrl,
+  type CaptureSlot,
   type SessionMetadata,
 } from "../api/client";
 
 type PhotoStripPreviewProps = {
   session: SessionMetadata | null;
-  busySlot: 1 | 2 | null;
+  busySlot: CaptureSlot | null;
   countdownValue: number | null;
-  onCapture: (slot: 1 | 2) => void;
+  isComposing: boolean;
+  onCapture: (slot: CaptureSlot) => void;
+  onCompose: (slots: CaptureSlot[]) => void;
 };
 
-type Slot = {
-  key: "old_1" | "current_1" | "old_2" | "current_2";
+type FrameSlot = {
   label: string;
   className: string;
 };
 
-const slots: Slot[] = [
-  { key: "old_1", label: "Old 1", className: "slot-old-1" },
-  { key: "current_1", label: "Current 1", className: "slot-current-1" },
-  { key: "old_2", label: "Old 2", className: "slot-old-2" },
-  { key: "current_2", label: "Current 2", className: "slot-current-2" },
+const captureSlots: CaptureSlot[] = [1, 2, 3, 4, 5, 6, 7, 8];
+
+const frameSlots: FrameSlot[] = [
+  { label: "Frame 1", className: "slot-old-1" },
+  { label: "Frame 2", className: "slot-current-1" },
+  { label: "Frame 3", className: "slot-current-2" },
+  { label: "Frame 4", className: "slot-old-2" },
 ];
 
-function hasCapture(session: SessionMetadata | null, slot: 1 | 2): boolean {
+function capturedSlotNumbers(session: SessionMetadata | null): CaptureSlot[] {
   if (!session) {
-    return false;
+    return [];
   }
-  if (["ready_to_compose", "composed"].includes(session.status)) {
-    return true;
-  }
-  return session.status === `captured_${slot}`;
+
+  return session.captures
+    .map((capture) => capture.match(/current_(\d+)\.jpg$/)?.[1])
+    .map((slot) => Number(slot))
+    .filter((slot): slot is CaptureSlot => captureSlots.includes(slot as CaptureSlot));
 }
 
-function getSlotImage(session: SessionMetadata | null, key: Slot["key"]): string | null {
-  const updatedAt = session?.updated_at ?? "initial";
-  if (key === "old_1") {
-    return `${oldPhotoUrl(1)}?t=${updatedAt}`;
-  }
-  if (key === "old_2") {
-    return `${oldPhotoUrl(2)}?t=${updatedAt}`;
-  }
-  if (key === "current_1" && session && hasCapture(session, 1)) {
-    return `${sessionCaptureUrl(session.session_id, 1)}?t=${session.updated_at}`;
-  }
-  if (key === "current_2" && session && hasCapture(session, 2)) {
-    return `${sessionCaptureUrl(session.session_id, 2)}?t=${session.updated_at}`;
-  }
-  return null;
-}
-
-function getSlotForCurrent(currentSlot: 1 | 2): Slot {
-  return slots.find((slot) => slot.key === `current_${currentSlot}`) ?? slots[1];
+function captureUrl(session: SessionMetadata, slot: CaptureSlot): string {
+  return `${sessionCaptureUrl(session.session_id, slot)}?t=${session.updated_at}`;
 }
 
 export function PhotoStripPreview({
   session,
   busySlot,
   countdownValue,
+  isComposing,
   onCapture,
+  onCompose,
 }: PhotoStripPreviewProps) {
-  const enlargedSlot = busySlot ? getSlotForCurrent(busySlot) : null;
-  const enlargedImageUrl = enlargedSlot ? getSlotImage(session, enlargedSlot.key) : null;
+  const capturedSlots = capturedSlotNumbers(session);
+  const nextSlot = captureSlots.find((slot) => !capturedSlots.includes(slot)) ?? null;
+  const [activeFrameIndex, setActiveFrameIndex] = useState<number | null>(null);
+  const [assignments, setAssignments] = useState<(CaptureSlot | null)[]>([null, null, null, null]);
+
+  const allCaptured = capturedSlots.length >= captureSlots.length;
+  const readyToCompose = assignments.every((slot) => slot !== null);
+  function assignToFrame(frameIndex: number, captureSlot: CaptureSlot) {
+    setAssignments((current) =>
+      current.map((assignedSlot, index) => {
+        if (index === frameIndex) {
+          return captureSlot;
+        }
+        return assignedSlot === captureSlot ? null : assignedSlot;
+      }),
+    );
+    setActiveFrameIndex(null);
+  }
+
+  if (!allCaptured) {
+    return (
+      <section className="shooting-flow" aria-label="Capture photos">
+        <div className="shooting-main">
+          <div className="shooting-preview">
+            {session && capturedSlots.length > 0 ? (
+              <img
+                src={captureUrl(session, capturedSlots[capturedSlots.length - 1])}
+                alt="Latest capture"
+              />
+            ) : (
+              <span>Ready</span>
+            )}
+            {busySlot && (
+              <strong className="shooting-countdown">
+                {countdownValue ?? "Shoot"}
+              </strong>
+            )}
+          </div>
+          <button
+            className="primary-action shutter-button"
+            disabled={!session || busySlot !== null || nextSlot === null}
+            onClick={() => nextSlot && onCapture(nextSlot)}
+            type="button"
+          >
+            {busySlot ? `Take Photo ${busySlot} / 8` : "Take Photo"}
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="print-preview" aria-label="Final print frame preview">
-      <div className="print-sheet">
-        <div className="print-logo-space" aria-hidden="true" />
-        {slots.map((slot) => {
-          const imageUrl = getSlotImage(session, slot.key);
-          const currentSlot =
-            slot.key === "current_1" ? 1 : slot.key === "current_2" ? 2 : null;
-          const isClickable =
-            currentSlot !== null &&
-            session !== null &&
-            busySlot === null &&
-            (currentSlot === 1 || hasCapture(session, 1));
-          const content = imageUrl ? (
-            <img src={imageUrl} alt={slot.label} />
-          ) : (
-            <span>{busySlot === currentSlot ? "Capturing..." : `Tap ${slot.label}`}</span>
-          );
-
-          if (currentSlot) {
-            return (
-              <button
-                className={`print-slot print-slot-button ${slot.className}`}
-                disabled={!isClickable}
-                key={slot.key}
-                onClick={() => onCapture(currentSlot)}
-                type="button"
-              >
-                {content}
-              </button>
-            );
-          }
-
-          return (
-            <div className={`print-slot ${slot.className}`} key={slot.key}>
-              {content}
-            </div>
-          );
-        })}
+    <section className="selection-flow" aria-label="Select final photos">
+      <div className="selection-layout">
+        <div className="print-preview selection-preview">
+          <div className="print-sheet">
+            <div className="print-logo-space" aria-hidden="true" />
+            {frameSlots.map((frame, index) => {
+              const assignedSlot = assignments[index];
+              return (
+                <button
+                  className={`print-slot print-slot-button assign-slot ${frame.className}`}
+                  key={frame.label}
+                  onClick={() => setActiveFrameIndex(index)}
+                  type="button"
+                >
+                  {session && assignedSlot ? (
+                    <img src={captureUrl(session, assignedSlot)} alt={`${frame.label} capture ${assignedSlot}`} />
+                  ) : (
+                    <span>{frame.label}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            className="primary-action compose-button"
+            disabled={!readyToCompose || isComposing}
+            onClick={() => onCompose(assignments as CaptureSlot[])}
+            type="button"
+          >
+            {isComposing ? "Composing..." : "Save final"}
+          </button>
+        </div>
       </div>
-      {enlargedSlot && (
-        <div className="slot-preview-overlay" aria-live="polite">
-          <div className="slot-preview-card">
-            {enlargedImageUrl ? (
-              <img src={enlargedImageUrl} alt={`${enlargedSlot.label} preview`} />
-            ) : (
-              <span>{enlargedSlot.label}</span>
-            )}
-            <strong>{countdownValue ?? "Capturing"}</strong>
+      {activeFrameIndex !== null && (
+        <div className="capture-picker-overlay" role="dialog" aria-modal="true" aria-label={`${frameSlots[activeFrameIndex].label} photo choices`}>
+          <div className="capture-picker-popover">
+            {captureSlots.map((slot) => {
+              const assigned = assignments.includes(slot);
+              const selected = assignments[activeFrameIndex] === slot;
+              return (
+                <button
+                  className={`capture-choice ${selected ? "is-selected" : ""} ${assigned ? "is-assigned" : ""}`}
+                  key={slot}
+                  onClick={() => assignToFrame(activeFrameIndex, slot)}
+                  type="button"
+                >
+                  {session && <img src={captureUrl(session, slot)} alt={`Capture ${slot}`} />}
+                  <span>{slot}</span>
+                </button>
+              );
+            })}
+            <button className="picker-close" onClick={() => setActiveFrameIndex(null)} type="button">
+              Close
+            </button>
           </div>
         </div>
       )}
     </section>
   );
 }
+
+

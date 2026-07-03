@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 from app.image.crop import center_crop_to_size, load_image
-from app.image.layout import ImageBox
+from app.image.layout import ImageBox, TextSpec
 from app.image.templates import PROJECT_ROOT, load_template, resolve_project_path
 
 
@@ -78,6 +78,35 @@ def _paste_overlay(canvas: Image.Image, overlay_path: Path) -> None:
         canvas.paste(overlay_rgba, (0, 0), overlay_rgba)
 
 
+def _load_text_font(font_size: int) -> ImageFont.ImageFont:
+    for font_path in (
+        PROJECT_ROOT / "assets" / "fonts" / "Jua-Regular.ttf",
+        Path("C:/Windows/Fonts/NotoSansKR-VF.ttf"),
+        Path("C:/Windows/Fonts/malgunbd.ttf"),
+        Path("C:/Windows/Fonts/malgun.ttf"),
+    ):
+        if font_path.exists():
+            return ImageFont.truetype(str(font_path), font_size)
+    return ImageFont.load_default()
+
+
+def _draw_text(canvas: Image.Image, text_spec: TextSpec) -> None:
+    draw = ImageDraw.Draw(canvas)
+    font = _load_text_font(text_spec.font_size)
+    bbox = draw.textbbox((0, 0), text_spec.value, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+
+    if text_spec.align == "center":
+        x = text_spec.x + (text_spec.width - text_width) // 2
+    elif text_spec.align == "right":
+        x = text_spec.x + text_spec.width - text_width
+    else:
+        x = text_spec.x
+    y = text_spec.y + (text_spec.height - text_height) // 2 - bbox[1]
+    draw.text((x, y), text_spec.value, fill=text_spec.color, font=font)
+
+
 def compose_session(
     session_id: str,
     template_id: str = "default",
@@ -121,6 +150,10 @@ def compose_session(
 
     if template.overlay:
         _paste_overlay(canvas, resolve_project_path(template.overlay))
+
+    if template.texts:
+        for text_spec in template.texts:
+            _draw_text(canvas, text_spec)
 
     final_path = Path(output_path) if output_path else default_output_path(session_id)
     if not final_path.is_absolute():

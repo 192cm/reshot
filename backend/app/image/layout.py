@@ -31,6 +31,14 @@ class LogoSpec(ImageBox):
 
 
 @dataclass(frozen=True)
+class TextSpec(ImageBox):
+    value: str
+    color: str = "#ffffff"
+    font_size: int = 32
+    align: str = "right"
+
+
+@dataclass(frozen=True)
 class OutputSpec:
     format: str = "jpg"
     quality: int = 92
@@ -44,6 +52,7 @@ class FrameTemplate:
     output: OutputSpec
     logo: LogoSpec | None = None
     overlay: str | None = None
+    texts: list[TextSpec] | None = None
 
 
 def _require_int(data: dict[str, Any], key: str) -> int:
@@ -108,6 +117,37 @@ def template_from_dict(data: dict[str, Any]) -> FrameTemplate:
             fit=fit,
         )
 
+    texts = []
+    texts_data = data.get("texts") or []
+    if not isinstance(texts_data, list):
+        raise ValueError("Template texts must be a list when provided.")
+    for text_data in texts_data:
+        if not isinstance(text_data, dict):
+            raise ValueError("Each template text must be an object.")
+        value = text_data.get("value")
+        if not isinstance(value, str) or not value:
+            raise ValueError("Each template text must include a non-empty value.")
+        text_box = box_from_dict(text_data)
+        color = text_data.get("color", "#ffffff")
+        align = text_data.get("align", "right")
+        font_size = text_data.get("font_size", 32)
+        if not isinstance(color, str) or not color:
+            raise ValueError("Template text color must be a string.")
+        if align not in {"left", "center", "right"}:
+            raise ValueError("Template text align must be left, center, or right.")
+        if not isinstance(font_size, int) or font_size <= 0:
+            raise ValueError("Template text font_size must be a positive integer.")
+        texts.append(TextSpec(
+            value=value,
+            x=text_box.x,
+            y=text_box.y,
+            width=text_box.width,
+            height=text_box.height,
+            color=color,
+            font_size=font_size,
+            align=align,
+        ))
+
     template_id = data.get("id")
     if not isinstance(template_id, str) or not template_id:
         raise ValueError("Template id must be a non-empty string.")
@@ -126,6 +166,7 @@ def template_from_dict(data: dict[str, Any]) -> FrameTemplate:
         slots=slots,
         logo=logo,
         overlay=overlay,
+        texts=texts,
         output=OutputSpec(
             format=str(output_data.get("format", "jpg")),
             quality=int(output_data.get("quality", 92)),

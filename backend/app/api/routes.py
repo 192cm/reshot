@@ -44,6 +44,8 @@ class CaptureRequest(BaseModel):
 
 
 def _session_error_to_http(exc: Exception) -> HTTPException:
+    if isinstance(exc, TimeoutError):
+        return HTTPException(status_code=504, detail=str(exc))
     if isinstance(exc, (InvalidSessionIdError, InvalidCaptureSlotError, ValueError)):
         return HTTPException(status_code=400, detail=str(exc))
     if isinstance(
@@ -76,6 +78,8 @@ def read_health() -> dict[str, object]:
             "captures": str(settings.captures_dir),
             "output": str(settings.output_dir),
             "assets": str(settings.assets_dir),
+            "camera_watch": str(settings.camera_watch_dir) if settings.camera_watch_dir else None,
+            "camera_trigger_configured": bool(settings.camera_trigger_command),
         },
     }
 

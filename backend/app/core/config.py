@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     output_dir: Path = Field(default=Path("output/sessions"))
     assets_dir: Path = Field(default=Path("assets"))
     camera_mode: str = "dummy"
+    camera_watch_dir: Path | None = None
+    camera_capture_timeout_seconds: int = 20
+    camera_trigger_command: str | None = None
+    camera_trigger_timeout_seconds: int = 5
 
     model_config = SettingsConfigDict(
         env_file=("../.env", ".env"),

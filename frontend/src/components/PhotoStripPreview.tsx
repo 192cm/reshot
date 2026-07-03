@@ -1,9 +1,10 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import {
   sessionCaptureUrl,
   type CaptureSlot,
   type SessionMetadata,
 } from "../api/client";
+import { LiveCameraPreview } from "./LiveCameraPreview";
 
 type PhotoStripPreviewProps = {
   session: SessionMetadata | null;
@@ -71,32 +72,42 @@ export function PhotoStripPreview({
   }
 
   if (!allCaptured) {
+    const latestCapture =
+      session && capturedSlots.length > 0
+        ? (
+            <img
+              src={captureUrl(session, capturedSlots[capturedSlots.length - 1])}
+              alt="Latest capture"
+            />
+          )
+        : (
+            <span>Ready</span>
+          );
+
     return (
       <section className="shooting-flow" aria-label="Capture photos">
         <div className="shooting-main">
-          <div className="shooting-preview">
-            {session && capturedSlots.length > 0 ? (
-              <img
-                src={captureUrl(session, capturedSlots[capturedSlots.length - 1])}
-                alt="Latest capture"
-              />
-            ) : (
-              <span>Ready</span>
-            )}
-            {busySlot && (
-              <strong className="shooting-countdown">
-                {countdownValue ?? "Shoot"}
-              </strong>
-            )}
+          <div className="shooting-camera-row">
+            <LiveCameraPreview
+              className="shooting-preview live-preview"
+              controlsClassName="shooting-side-controls"
+              fallback={latestCapture}
+            >
+              {busySlot && (
+                <strong className="shooting-countdown">
+                  {countdownValue ?? "촬영"}
+                </strong>
+              )}
+            </LiveCameraPreview>
+            <button
+              className="primary-action shutter-button"
+              disabled={!session || busySlot !== null || nextSlot === null}
+              onClick={() => nextSlot && onCapture(nextSlot)}
+              type="button"
+            >
+              {busySlot ? `사진 촬영 중 ${busySlot} / 8` : "사진 촬영 시작하기"}
+            </button>
           </div>
-          <button
-            className="primary-action shutter-button"
-            disabled={!session || busySlot !== null || nextSlot === null}
-            onClick={() => nextSlot && onCapture(nextSlot)}
-            type="button"
-          >
-            {busySlot ? `Take Photo ${busySlot} / 8` : "Take Photo"}
-          </button>
         </div>
       </section>
     );

@@ -84,20 +84,27 @@ button:not(:disabled):hover {
 
 .start-panel {
   display: grid;
-  gap: 20px;
+  align-content: center;
+  gap: clamp(20px, 3dvh, 34px);
   justify-items: center;
-  width: min(100%, 520px);
+  width: min(92vw, 920px);
+  min-height: min(34dvh, 360px);
   text-align: center;
 }
 
 .start-panel h1 {
-  font-size: 3rem;
+  font-size: clamp(2.5rem, 4.5vw, 5.5rem);
+  white-space: nowrap;
 }
 
 .start-button {
-  min-width: 180px;
-  min-height: 56px;
-  font-size: 1.1rem;
+  width: clamp(240px, 22vw, 420px);
+  min-height: clamp(68px, 8dvh, 96px);
+  font-size: clamp(1.15rem, 1.8vw, 1.75rem);
+}
+
+.start-panel .eyebrow {
+  font-size: clamp(0.9rem, 1vw, 1.2rem);
 }
 
 .capture-header {
@@ -1549,4 +1556,383 @@ main.app-shell:has(.result-panel) .capture-workspace {
   .qr-card button {
     min-height: 42px;
   }
+}
+.live-preview > div {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.live-preview video,
+.live-preview-fallback,
+.live-preview-fallback img {
+  width: 100%;
+  height: 100%;
+}
+
+.live-preview video {
+  object-fit: cover;
+  background: #111719;
+}
+
+.live-preview-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #20272b;
+  color: #ffffff;
+}
+
+.live-preview-fallback img {
+  object-fit: cover;
+}
+
+.live-preview-device {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 8px;
+  background: rgb(17 23 25 / 78%);
+  color: #ffffff;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.live-preview-device select {
+  min-width: 0;
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 6px;
+  background: #fffdf8;
+  color: #172026;
+  font: inherit;
+  padding: 6px 8px;
+}
+
+.live-preview-status {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 999px;
+  background: rgb(17 23 25 / 78%);
+  color: #ffffff;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.live-preview-status-live {
+  background: rgb(38 52 31 / 82%);
+}
+
+.live-preview-status-unavailable {
+  background: rgb(118 42 34 / 86%);
+}
+
+.live-preview-message {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+}
+
+.live-preview-message strong {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  border-radius: 8px;
+  background: rgb(17 23 25 / 76%);
+  color: #ffffff;
+  padding: 10px 12px;
+  font-size: 1rem;
+}
+
+/* Shooting screen: maximize the live photo area while preserving the print-slot ratio. */
+.capture-screen:has(.shooting-flow),
+.capture-stage:has(.shooting-flow) {
+  width: 100vw;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.shooting-flow {
+  width: 100vw;
+  height: 100dvh;
+  min-height: 0;
+  align-content: stretch;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.shooting-main {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: 10px;
+  justify-items: center;
+  align-items: center;
+}
+
+.shooting-preview {
+  width: min(96vw, calc((100dvh - 98px) * 518 / 744));
+  max-width: none;
+  max-height: calc(100dvh - 98px);
+  align-self: end;
+}
+
+.shutter-button {
+  width: min(96vw, calc((100dvh - 98px) * 518 / 744));
+  min-width: 0;
+  max-width: none;
+  align-self: start;
+}
+
+/* Shooting screen: keep preview centered and move controls to the right rail. */
+.shooting-main {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  place-items: center;
+}
+
+.shooting-camera-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(0, auto) minmax(220px, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: 14px;
+  align-items: center;
+}
+
+.shooting-camera-row .shooting-preview {
+  grid-column: 2;
+  grid-row: 1;
+  width: min(96vw, calc((100dvh - 24px) * 518 / 744));
+  max-width: calc(100vw - 520px);
+  max-height: calc(100dvh - 24px);
+  align-self: center;
+  justify-self: center;
+}
+
+.shooting-side-controls {
+  grid-column: 3;
+  grid-row: 1;
+  display: grid;
+  width: min(280px, 100%);
+  align-self: end;
+  justify-self: start;
+  gap: 10px;
+}
+
+.shooting-side-controls .live-preview-device {
+  position: static;
+  display: grid;
+  grid-template-columns: 1fr;
+  width: 100%;
+  border-color: rgb(255 255 255 / 18%);
+  background: rgb(17 23 25 / 86%);
+}
+
+.shooting-side-controls .live-preview-device select {
+  width: 100%;
+}
+
+.shooting-camera-row .shutter-button {
+  grid-column: 3;
+  grid-row: 1;
+  width: min(280px, 100%);
+  min-width: 0;
+  max-width: none;
+  align-self: end;
+  justify-self: start;
+  margin-top: 86px;
+}
+
+@media (max-width: 900px) {
+  .shooting-camera-row {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto auto;
+  }
+
+  .shooting-camera-row .shooting-preview,
+  .shooting-side-controls,
+  .shooting-camera-row .shutter-button {
+    grid-column: 1;
+    justify-self: center;
+  }
+
+  .shooting-camera-row .shooting-preview {
+    grid-row: 1;
+    width: min(96vw, calc((100dvh - 160px) * 518 / 744));
+    max-width: none;
+    max-height: calc(100dvh - 160px);
+  }
+
+  .shooting-side-controls {
+    grid-row: 2;
+    width: min(96vw, 520px);
+  }
+
+  .shooting-camera-row .shutter-button {
+    grid-row: 3;
+    width: min(96vw, 520px);
+    margin-top: 0;
+  }
+}
+
+/* Shooting controls rail: source selector above, capture button below. */
+.shooting-camera-row {
+  grid-template-rows: minmax(0, 1fr) auto 10px auto minmax(0, 1fr);
+}
+
+.shooting-camera-row .shooting-preview {
+  grid-row: 1 / -1;
+}
+
+.shooting-side-controls {
+  grid-column: 3;
+  grid-row: 2;
+  align-self: end;
+  justify-self: start;
+}
+
+.shooting-camera-row .shutter-button {
+  grid-column: 3;
+  grid-row: 4;
+  align-self: start;
+  justify-self: start;
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  .shooting-camera-row {
+    grid-template-rows: minmax(0, 1fr) auto auto;
+  }
+
+  .shooting-camera-row .shooting-preview {
+    grid-row: 1;
+  }
+
+  .shooting-side-controls {
+    grid-row: 2;
+  }
+
+  .shooting-camera-row .shutter-button {
+    grid-row: 3;
+  }
+}
+
+/* Live preview: rotate HDMI/capture-card landscape feed into portrait without cropping. */
+.live-preview video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: translate(-50%, -50%) rotate(90deg);
+  transform-origin: center;
+}
+
+/* Live preview fill: rotated capture-card feed should cover the full portrait frame. */
+.live-preview video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(100% * 744 / 518);
+  height: calc(100% * 518 / 744);
+  min-width: calc(100% * 744 / 518);
+  min-height: 100%;
+  object-fit: cover;
+  transform: translate(-50%, -50%) rotate(90deg);
+  transform-origin: center;
+}
+
+/* Final live-preview calibration: NX Tether JPG is 2:3 portrait after EXIF orientation. */
+.shooting-camera-row .shooting-preview {
+  aspect-ratio: 2 / 3;
+}
+
+.live-preview video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 300%;
+  height: 100%;
+  min-width: 300%;
+  min-height: 100%;
+  object-fit: cover;
+  transform: translate(-50%, -50%) rotate(90deg);
+  transform-origin: center;
+}
+
+/* Match preview framing to NX Tether JPG: portrait 2:3, rotated HDMI feed fills by height. */
+.live-preview video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150%;
+  height: 100%;
+  min-width: 150%;
+  min-height: 100%;
+  object-fit: cover;
+  transform: translate(-50%, -50%) rotate(90deg);
+  transform-origin: center;
+}
+
+/* Final calibration: displayed NX Tether JPG is portrait 2:3 after EXIF orientation. Rotate the 16:9 HDMI preview and fit it to that same portrait frame. */
+.shooting-camera-row .shooting-preview {
+  aspect-ratio: 2 / 3;
+}
+
+.live-preview video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150%;
+  height: 66.6667%;
+  min-width: 150%;
+  min-height: 66.6667%;
+  object-fit: cover;
+  transform: translate(-50%, -50%) rotate(90deg);
+  transform-origin: center;
+}
+
+/* Live preview framing: show the same portrait crop that will go into the photo-strip frame. */
+.shooting-camera-row .shooting-preview {
+  aspect-ratio: 518 / 744;
+}
+
+.live-preview video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(100% * 744 / 518);
+  height: calc(100% * 518 / 744);
+  min-width: calc(100% * 744 / 518);
+  min-height: calc(100% * 518 / 744);
+  object-fit: cover;
+  transform: translate(-50%, -50%) rotate(90deg);
+  transform-origin: center;
 }

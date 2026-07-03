@@ -7,21 +7,57 @@
   },
   "logo": {
     "src": "assets/frames/mpnu-logo.png",
-    "x": 420,
-    "y": 48,
-    "width": 360,
-    "height": 170,
+    "x": 385,
+    "y": 34,
+    "width": 430,
+    "height": 190,
     "fit": "contain"
   },
   "slots": [
-    { "key": "old_1", "x": 76, "y": 251, "width": 518, "height": 744 },
-    { "key": "current_1", "x": 628, "y": 251, "width": 518, "height": 744 },
-    { "key": "current_2", "x": 76, "y": 1017, "width": 518, "height": 744 },
-    { "key": "old_2", "x": 628, "y": 1017, "width": 518, "height": 744 }
+    {
+      "key": "old_1",
+      "x": 76,
+      "y": 251,
+      "width": 518,
+      "height": 744
+    },
+    {
+      "key": "current_1",
+      "x": 628,
+      "y": 251,
+      "width": 518,
+      "height": 744
+    },
+    {
+      "key": "current_2",
+      "x": 76,
+      "y": 1017,
+      "width": 518,
+      "height": 744
+    },
+    {
+      "key": "old_2",
+      "x": 628,
+      "y": 1017,
+      "width": 518,
+      "height": 744
+    }
   ],
   "overlay": "assets/frames/default_overlay.png",
   "output": {
     "format": "jpg",
     "quality": 92
-  }
+  },
+  "texts": [
+    {
+      "value": "매직PNU 홈커밍 26.07.04",
+      "x": 628,
+      "y": 1780,
+      "width": 518,
+      "height": 50,
+      "font_size": 30,
+      "color": "#d8d8d8",
+      "align": "right"
+    }
+  ]
 }

@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from app.camera.dummy import capture_dummy
+from app.camera.watch_folder import capture_from_watch_folder
 from app.core.config import get_settings
 from app.image.templates import PROJECT_ROOT
 from app.models.session import SessionMetadata
@@ -46,12 +47,22 @@ def capture_session_photo(session_id: str, slot: int) -> SessionMetadata:
     destination = capture_path(metadata.session_id, slot)
 
     settings = get_settings()
-    if settings.camera_mode != "dummy":
+    if settings.camera_mode == "dummy":
+        capture_dummy(slot, destination)
+    elif settings.camera_mode == "watch_folder":
+        if settings.camera_watch_dir is None:
+            raise ValueError("CAMERA_WATCH_DIR must be set when CAMERA_MODE=watch_folder.")
+        capture_from_watch_folder(
+            watch_dir=settings.camera_watch_dir,
+            destination=destination,
+            timeout_seconds=settings.camera_capture_timeout_seconds,
+            trigger_command=settings.camera_trigger_command,
+            trigger_timeout_seconds=settings.camera_trigger_timeout_seconds,
+        )
+    else:
         raise UnsupportedCameraModeError(
             f"CAMERA_MODE={settings.camera_mode} is not implemented yet."
         )
-
-    capture_dummy(slot, destination)
 
     captured_slots = [
         index

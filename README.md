@@ -26,6 +26,7 @@
 - **세로형 최종 이미지**: 기본 템플릿은 `1200 x 1854` 캔버스와 `518 x 744` 사진 슬롯 4개를 사용합니다.
 - **QR 공유**: 최종 이미지 URL을 담은 QR 이미지를 생성하고 결과 화면에서 모달로 표시합니다.
 - **세션 기반 저장**: 촬영 원본, 최종 이미지, QR, 메타데이터를 세션별 폴더에 저장합니다.
+- **Google Drive 업로드 옵션**: 설정을 켜면 최종 이미지를 지정한 Drive 폴더에 업로드하고, QR이 Drive 공유 링크를 가리키게 할 수 있습니다.
 - **카메라 모드 분리**: `dummy`와 `watch_folder` 모드를 구현했으며, Nikon 직접 제어는 어댑터 자리만 준비되어 있습니다.
 
 ---
@@ -183,6 +184,39 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ---
 
+## Google Drive 공유 옵션
+
+기본값은 로컬 백엔드 이미지 URL을 QR에 넣는 방식입니다. 행사장 네트워크 대신 Google Drive 공유 링크를 쓰고 싶으면 루트 `.env`에서 Drive 업로드를 켭니다.
+
+```text
+GOOGLE_DRIVE_ENABLED=true
+GOOGLE_DRIVE_FOLDER_ID={Drive_폴더_ID}
+GOOGLE_DRIVE_CREDENTIALS_FILE=secrets/google/credentials.json
+GOOGLE_DRIVE_TOKEN_FILE=secrets/google/token.json
+GOOGLE_DRIVE_SHARE_PUBLIC=true
+GOOGLE_DRIVE_SCOPES=https://www.googleapis.com/auth/drive
+```
+
+준비 절차:
+
+1. Google Cloud에서 OAuth 클라이언트의 `credentials.json`을 내려받아 `secrets/google/credentials.json`에 둡니다.
+2. 백엔드 가상환경을 활성화한 뒤 OAuth 토큰을 생성합니다.
+
+```powershell
+cd C:\Users\kyle0\Develops\reshot\backend
+.\.venv\Scripts\Activate.ps1
+python -m app.scripts.google_drive_auth
+```
+
+3. `.env`의 `GOOGLE_DRIVE_FOLDER_ID`를 업로드 대상 폴더 ID로 설정합니다.
+4. 서버를 재시작하고 `/health`의 `google_drive.enabled`, `folder_configured`, `share_public` 값을 확인합니다.
+
+Drive 업로드가 켜진 상태에서 `POST /sessions/{session_id}/compose`를 호출하면 `final.jpg`를 업로드하거나 기존 Drive 파일을 갱신하고, 세션 메타데이터의 `drive_file_id`, `drive_share_url`, `qr_target_url`을 저장합니다. 이때 QR은 로컬 `/sessions/{session_id}/image`가 아니라 Drive 공유 링크를 담습니다.
+
+`secrets/`는 `.gitignore`에 포함되어 있으므로 OAuth 자격 증명과 토큰은 저장소에 커밋하지 않습니다.
+
+---
+
 ## 설정
 
 | 변수 | 기본값 | 설명 |
@@ -200,6 +234,12 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 | `CAMERA_TRIGGER_COMMAND` | 비어 있음 | 촬영 요청 전에 실행할 선택 명령 |
 | `CAMERA_TRIGGER_TIMEOUT_SECONDS` | `5` | 트리거 명령 제한 시간 |
 | `VITE_API_BASE_URL` | `http://localhost:8000` | 프론트엔드가 호출할 백엔드 주소 |
+| `GOOGLE_DRIVE_ENABLED` | `false` | 최종 이미지 Google Drive 업로드 사용 여부 |
+| `GOOGLE_DRIVE_FOLDER_ID` | 비어 있음 | 업로드할 Google Drive 폴더 ID |
+| `GOOGLE_DRIVE_CREDENTIALS_FILE` | `secrets/google/credentials.json` | OAuth 클라이언트 자격 증명 파일 |
+| `GOOGLE_DRIVE_TOKEN_FILE` | `secrets/google/token.json` | 로컬 OAuth 토큰 저장 파일 |
+| `GOOGLE_DRIVE_SHARE_PUBLIC` | `true` | 업로드 파일을 링크가 있는 모든 사용자가 읽게 할지 여부 |
+| `GOOGLE_DRIVE_SCOPES` | `https://www.googleapis.com/auth/drive` | OAuth 승인 범위. 쉼표로 여러 scope를 지정할 수 있음 |
 
 ---
 
@@ -219,7 +259,8 @@ reshot/
 │       ├── camera/           dummy/watch_folder/Nikon 카메라 어댑터
 │       ├── image/            템플릿, 레이아웃, 크롭 처리
 │       ├── models/           세션 응답 모델
-│       └── services/         세션, 촬영, 합성, QR 서비스
+│       ├── scripts/          Google Drive OAuth 등 운영 스크립트
+│       └── services/         세션, 촬영, 합성, QR, Google Drive 서비스
 ├── assets/
 │   ├── frames/               4컷 템플릿 JSON, 로고
 │   ├── fonts/                합성 텍스트용 폰트
@@ -238,13 +279,13 @@ reshot/
 | 메서드 | 경로 | 역할 |
 | --- | --- | --- |
 | `GET` | `/` | 기본 상태 확인 |
-| `GET` | `/health` | 서버 상태, 카메라 모드, 저장 경로 확인 |
+| `GET` | `/health` | 서버 상태, 카메라 모드, 저장 경로, Google Drive 설정 상태 확인 |
 | `POST` | `/sessions` | 새 촬영 세션 생성 |
 | `GET` | `/sessions/{session_id}` | 세션 메타데이터 조회 |
 | `POST` | `/sessions/{session_id}/capture` | 지정 slot 사진 촬영 또는 dummy 생성 |
 | `GET` | `/sessions/{session_id}/capture/{slot}` | 촬영 원본 이미지 조회 |
 | `GET` | `/old-photos/{slot}` | 기본 과거 사진 조회 |
-| `POST` | `/sessions/{session_id}/compose` | 선택한 4장으로 최종 이미지 합성 및 QR 생성 |
+| `POST` | `/sessions/{session_id}/compose` | 선택한 4장으로 최종 이미지 합성, 선택적 Drive 업로드, QR 생성 |
 | `GET` | `/sessions/{session_id}/image` | 최종 이미지 조회 |
 | `POST` | `/sessions/{session_id}/qr` | QR 이미지 생성 또는 재생성 |
 | `GET` | `/sessions/{session_id}/qr` | QR 이미지 조회 |
@@ -262,6 +303,8 @@ Invoke-RestMethod -Method Post "http://127.0.0.1:8000/sessions/$($session.sessio
 ```
 
 `selected_capture_slots`는 반드시 4개여야 하고, 1부터 8까지의 중복 없는 slot 번호여야 합니다.
+
+Google Drive 업로드가 켜져 있으면 compose 응답의 `drive_share_url`과 `qr_target_url`에 Drive 링크가 들어갑니다. 꺼져 있으면 `qr_target_url`은 `PUBLIC_BASE_URL` 기반의 로컬 이미지 URL입니다.
 
 ---
 
@@ -292,6 +335,7 @@ Invoke-RestMethod -Method Post "http://127.0.0.1:8000/sessions/$($session.sessio
 - 8장 촬영 플로우
 - 8장 중 4장 선택 UI
 - 선택한 4장으로 최종 이미지 합성
+- Google Drive 선택 업로드와 Drive 공유 링크 기반 QR 생성
 - 결과 화면의 세로형 이미지 프레임과 하단 QR/처음 버튼
 - QR 모달 표시
 - 로컬 네트워크 QR 설정 절차
@@ -303,6 +347,7 @@ Invoke-RestMethod -Method Post "http://127.0.0.1:8000/sessions/$($session.sessio
 - Nikon 직접 제어 어댑터 구현 여부 결정
 - 촬영 실패 후 재시도와 복구 UI
 - iPhone/Android QR 열기와 이미지 저장 검증
+- Google Drive OAuth/폴더 권한과 현장 네트워크 조건 검증
 - 세션 정리, 보존 정책, 운영자 화면
 
 ---
@@ -315,6 +360,7 @@ Invoke-RestMethod -Method Post "http://127.0.0.1:8000/sessions/$($session.sessio
 | 백엔드 | FastAPI, Uvicorn, Pydantic Settings |
 | 이미지 처리 | Pillow |
 | QR 생성 | qrcode[pil] |
+| Google Drive | google-api-python-client, google-auth, google-auth-oauthlib |
 | 로컬 운영 | Windows PowerShell, 같은 Wi-Fi 또는 핫스팟 |
 
 ---

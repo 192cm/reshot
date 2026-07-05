@@ -20,6 +20,9 @@ export type SessionMetadata = {
   template_id: string;
   final_image_path: string;
   qr_image_path: string | null;
+  qr_target_url: string | null;
+  drive_file_id: string | null;
+  drive_share_url: string | null;
   old_photos: string[];
   captures: string[];
 };

@@ -12,7 +12,13 @@ from app.services.camera_service import (
     get_capture_image_for_session,
 )
 from app.services.compose_service import compose_session
+from app.services.google_drive_service import (
+    GoogleDriveConfigurationError,
+    GoogleDriveUploadError,
+    upload_final_image_to_drive,
+)
 from app.services.qr_service import (
+    build_result_image_url,
     SessionQrNotFoundError,
     generate_session_qr,
     get_qr_image_for_session,
@@ -55,6 +61,10 @@ def _session_error_to_http(exc: Exception) -> HTTPException:
         return HTTPException(status_code=404, detail=str(exc))
     if isinstance(exc, SessionMetadataError):
         return HTTPException(status_code=500, detail=str(exc))
+    if isinstance(exc, GoogleDriveConfigurationError):
+        return HTTPException(status_code=500, detail=str(exc))
+    if isinstance(exc, GoogleDriveUploadError):
+        return HTTPException(status_code=502, detail=str(exc))
     if isinstance(exc, UnsupportedCameraModeError):
         return HTTPException(status_code=501, detail=str(exc))
     return HTTPException(status_code=500, detail="Unexpected session error.")
@@ -80,6 +90,11 @@ def read_health() -> dict[str, object]:
             "assets": str(settings.assets_dir),
             "camera_watch": str(settings.camera_watch_dir) if settings.camera_watch_dir else None,
             "camera_trigger_configured": bool(settings.camera_trigger_command),
+        },
+        "google_drive": {
+            "enabled": settings.google_drive_enabled,
+            "folder_configured": bool(settings.google_drive_folder_id),
+            "share_public": settings.google_drive_share_public,
         },
     }
 
@@ -188,7 +203,11 @@ def compose_session_endpoint(
             template_id=template_id,
             selected_capture_slots=selected_capture_slots,
         )
-        generate_session_qr(session_id)
+        qr_target_url = build_result_image_url(session_id)
+        if get_settings().google_drive_enabled:
+            uploaded_metadata = upload_final_image_to_drive(session_id)
+            qr_target_url = uploaded_metadata.drive_share_url or qr_target_url
+        generate_session_qr(session_id, target_url=qr_target_url)
         return read_session_metadata(session_id)
     except Exception as exc:
         raise _session_error_to_http(exc) from exc

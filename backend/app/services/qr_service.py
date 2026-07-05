@@ -52,14 +52,14 @@ def _assert_qr_path_is_safe(path: Path) -> None:
         raise InvalidSessionIdError("QR image path must stay below output/sessions.")
 
 
-def generate_session_qr(session_id: str) -> SessionMetadata:
+def generate_session_qr(session_id: str, target_url: str | None = None) -> SessionMetadata:
     """Generate or regenerate the session QR PNG and update metadata."""
 
     safe_session_id = validate_session_id(session_id)
     metadata = read_session_metadata(safe_session_id)
     get_final_image_for_session(safe_session_id)
 
-    result_url = build_result_image_url(safe_session_id)
+    result_url = target_url or metadata.qr_target_url or build_result_image_url(safe_session_id)
     path = qr_image_path(safe_session_id)
     _assert_qr_path_is_safe(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -71,6 +71,7 @@ def generate_session_qr(session_id: str) -> SessionMetadata:
         update={
             "updated_at": datetime.now(timezone.utc),
             "qr_image_path": project_relative(path),
+            "qr_target_url": result_url,
         }
     )
     return save_session_metadata(updated)

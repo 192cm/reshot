@@ -94,7 +94,7 @@ export default function App() {
   }, [page.name, session]);
 
   async function runCountdown() {
-    for (const value of [7, 6, 5, 4, 3, 2, 1]) {
+    for (const value of [5, 4, 3, 2, 1]) {
       setCountdownValue(value);
       await wait(1000);
     }
@@ -179,7 +179,7 @@ export default function App() {
         {page.name === "start" && (
           <div className="start-panel">
             <p className="eyebrow">Reshot</p>
-            <h1>Ready to shoot</h1>
+            <h1>매직PNU 홈커밍에 오신 것을 환영합니다</h1>
             <button
               className="primary-action start-button"
               onClick={() => {
@@ -190,7 +190,7 @@ export default function App() {
               }}
               type="button"
             >
-              Start
+              촬영 시작
             </button>
           </div>
         )}

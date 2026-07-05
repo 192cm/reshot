@@ -29,6 +29,9 @@ const frameSlots: FrameSlot[] = [
   { label: "Frame 4", className: "slot-old-2" },
 ];
 
+const frameLogoUrl = new URL("../../../assets/frames/mpnu-logo.png", import.meta.url).href;
+const frameText = "매직PNU 홈커밍 26.07.04";
+
 function capturedSlotNumbers(session: SessionMetadata | null): CaptureSlot[] {
   if (!session) {
     return [];
@@ -54,6 +57,7 @@ export function PhotoStripPreview({
 }: PhotoStripPreviewProps) {
   const capturedSlots = capturedSlotNumbers(session);
   const nextSlot = captureSlots.find((slot) => !capturedSlots.includes(slot)) ?? null;
+  const displayedCaptureCount = Math.min(captureSlots.length, busySlot ?? capturedSlots.length);
   const [activeFrameIndex, setActiveFrameIndex] = useState<number | null>(null);
   const [assignments, setAssignments] = useState<(CaptureSlot | null)[]>([null, null, null, null]);
 
@@ -99,6 +103,9 @@ export function PhotoStripPreview({
                 </strong>
               )}
             </LiveCameraPreview>
+            <div className="shooting-progress" aria-label={`${displayedCaptureCount} of ${captureSlots.length} photos`} aria-live="polite">
+              {displayedCaptureCount} / {captureSlots.length}
+            </div>
             <button
               className="primary-action shutter-button"
               disabled={!session || busySlot !== null || nextSlot === null}
@@ -118,7 +125,9 @@ export function PhotoStripPreview({
       <div className="selection-layout">
         <div className="print-preview selection-preview">
           <div className="print-sheet">
-            <div className="print-logo-space" aria-hidden="true" />
+            <div className="print-logo-space" aria-hidden="true">
+              <img src={frameLogoUrl} alt="" />
+            </div>
             {frameSlots.map((frame, index) => {
               const assignedSlot = assignments[index];
               return (
@@ -136,6 +145,9 @@ export function PhotoStripPreview({
                 </button>
               );
             })}
+            <div className="print-template-text" aria-hidden="true">
+              {frameText}
+            </div>
           </div>
           <button
             className="primary-action compose-button"

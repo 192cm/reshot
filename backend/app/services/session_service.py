@@ -110,6 +110,9 @@ def build_session_metadata(
         template_id=template_id,
         final_image_path=project_relative(final_image or final_image_path(safe_session_id)),
         qr_image_path=existing.qr_image_path if existing else None,
+        qr_target_url=existing.qr_target_url if existing else None,
+        drive_file_id=existing.drive_file_id if existing else None,
+        drive_share_url=existing.drive_share_url if existing else None,
         old_photos=_default_old_photos() if old_photos is None else old_photos,
         captures=_default_captures(safe_session_id) if captures is None else captures,
     )

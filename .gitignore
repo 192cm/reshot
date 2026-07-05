@@ -11,3 +11,4 @@ captures/*
 !captures/.gitkeep
 output/sessions/*
 !output/sessions/.gitkeep
+secrets/

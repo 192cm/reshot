@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     camera_capture_timeout_seconds: int = 20
     camera_trigger_command: str | None = None
     camera_trigger_timeout_seconds: int = 5
+    google_drive_enabled: bool = False
+    google_drive_folder_id: str | None = None
+    google_drive_credentials_file: Path = Field(default=Path("secrets/google/credentials.json"))
+    google_drive_token_file: Path = Field(default=Path("secrets/google/token.json"))
+    google_drive_share_public: bool = True
+    google_drive_scopes: str = "https://www.googleapis.com/auth/drive"
 
     model_config = SettingsConfigDict(
         env_file=("../.env", ".env"),

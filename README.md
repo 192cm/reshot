@@ -4,7 +4,7 @@
 
 **현장 포토부스용 4컷 사진 촬영 앱**
 
-8장의 현재 사진을 촬영한 뒤 마음에 드는 4장을 골라 4컷 결과 이미지를 만들고, QR 코드로 휴대폰에서 받을 수 있게 하는 로컬 서버 기반 앱입니다.
+8장의 현재 사진을 촬영한 뒤 마음에 드는 4장을 골라 세로형 4컷 결과 이미지를 만들고, QR 코드로 휴대폰에서 받을 수 있게 하는 로컬 서버 기반 앱입니다.
 
 <br>
 
@@ -20,13 +20,13 @@
 
 ## 기능
 
-- **8장 연속 촬영**: 촬영 화면에서 7초 카운트다운 후 1번부터 8번까지 순서대로 촬영합니다.
+- **8장 연속 촬영**: 촬영 화면에서 5초 카운트다운 후 1번부터 8번까지 순서대로 촬영합니다.
+- **라이브 프리뷰**: 브라우저 카메라 입력 또는 HDMI 캡처 장치를 선택해 구도를 확인합니다.
 - **4장 선택 합성**: 촬영 완료 후 4컷 프레임의 각 영역을 누르고, 8장 중 원하는 사진을 골라 배치합니다.
 - **세로형 최종 이미지**: 기본 템플릿은 `1200 x 1854` 캔버스와 `518 x 744` 사진 슬롯 4개를 사용합니다.
-- **결과 화면 최적화**: 최종 사진은 원본 비율에 맞는 검은 프레임 안에 표시되고, 아래에는 `QR 보기`와 `처음으로` 버튼만 배치됩니다.
-- **QR 공유**: 결과 이미지 URL을 담은 QR 이미지를 생성하고 모달로 표시합니다.
+- **QR 공유**: 최종 이미지 URL을 담은 QR 이미지를 생성하고 결과 화면에서 모달로 표시합니다.
 - **세션 기반 저장**: 촬영 원본, 최종 이미지, QR, 메타데이터를 세션별 폴더에 저장합니다.
-- **카메라 모드 분리**: 현재는 `dummy` 모드 중심이며, `watch_folder`와 Nikon 직접 제어를 붙일 수 있는 구조를 둡니다.
+- **카메라 모드 분리**: `dummy`와 `watch_folder` 모드를 구현했으며, Nikon 직접 제어는 어댑터 자리만 준비되어 있습니다.
 
 ---
 
@@ -62,7 +62,7 @@ Copy-Item .env.example .env
 Copy-Item frontend\.env.example frontend\.env
 ```
 
-기본 개발 모드는 `CAMERA_MODE=dummy`입니다. 실제 Nikon 연결 없이도 촬영, 선택, 합성, QR 흐름을 확인할 수 있습니다.
+기본 개발 모드는 `CAMERA_MODE=dummy`입니다. 실제 카메라 연결 없이도 세션 생성, 촬영 더미 생성, 4장 선택, 합성, QR 흐름을 확인할 수 있습니다.
 
 ### 3. 서버 실행
 
@@ -99,42 +99,64 @@ npm run dev
 Start
   -> 세션 생성
   -> /shoot 이동
-  -> 8장 연속 촬영
-  -> 촬영된 8장 중 4장 선택
+  -> 프리뷰 소스 선택
+  -> 5초 카운트다운 후 1~8번 사진 연속 촬영
+  -> 4컷 프레임의 각 칸 선택
+  -> 8장 중 원하는 사진을 각 칸에 배치
+  -> Save final
   -> final.jpg + qr.png 생성
   -> /result/{session_id} 이동
-  -> 최종 이미지 확인
   -> QR 보기 또는 처음으로 이동
 ```
 
-촬영 중에는 마지막 촬영 이미지가 큰 미리보기 영역에 표시됩니다. 촬영 완료 후에는 최종 4컷 프레임이 보이고, 각 칸을 눌러 8장 중 원하는 사진을 배치합니다.
+촬영 중에는 프리뷰 영역에 브라우저 카메라 또는 캡처 장치 입력이 표시됩니다. 프리뷰는 구도 확인용이며, 최종 합성에는 백엔드 카메라 모드가 저장한 JPEG 파일을 사용합니다.
 
 ---
 
-## 결과 화면 레이아웃
+## 카메라 모드
 
-결과 화면은 화면 전체를 다음처럼 나눕니다.
+### `dummy`
+
+기본값입니다. 실제 카메라 없이 slot별 샘플 이미지를 복사하거나 fallback 이미지를 생성합니다.
 
 ```text
-result-panel 전체 높이
-  - 아래 버튼 바 높이
-  - 이미지/버튼 간격
-  = final-image-wrap 높이
+CAMERA_MODE=dummy
 ```
 
-`final-image-wrap`은 최종 이미지와 같은 `1200 / 1854` 비율을 갖는 검은 프레임입니다. 사진은 이 프레임 안에 `object-fit: contain`으로 표시됩니다. 아래 버튼 바는 고정 높이로 예약되어 사진 영역과 겹치지 않습니다.
+### `watch_folder`
 
-하단 버튼 텍스트는 한국어 폰트 fallback과 줄바꿈 방지 스타일을 적용해 `QR 보기`, `처음으로`, `닫기`가 깨지거나 이상하게 줄바꿈되지 않게 했습니다.
+Nikon NX Tether, digiCamControl, 카메라 제조사 유틸리티처럼 촬영 파일을 특정 폴더에 저장하는 프로그램과 함께 쓰는 모드입니다.
+
+```text
+CAMERA_MODE=watch_folder
+CAMERA_WATCH_DIR=C:\Users\kyle0\Pictures\ReshotTether
+CAMERA_CAPTURE_TIMEOUT_SECONDS=20
+CAMERA_TRIGGER_COMMAND=powershell -ExecutionPolicy Bypass -File "C:\Users\kyle0\Develops\reshot\tools\trigger_nx_tether.ps1"
+CAMERA_TRIGGER_TIMEOUT_SECONDS=5
+```
+
+동작 방식:
+
+1. 촬영 요청이 들어오면 감시 폴더의 기존 JPG 목록을 기억합니다.
+2. `CAMERA_TRIGGER_COMMAND`가 있으면 먼저 실행합니다.
+3. 새 JPG 또는 촬영 시작 시점 이후 갱신된 JPG를 기다립니다.
+4. 파일 크기와 수정 시간이 안정되면 `captures/{session_id}/current_{slot}.jpg`로 복사합니다.
+
+`tools/trigger_nx_tether.ps1`은 실행 중인 NX Tether 창을 찾아 앞으로 가져온 뒤 `Ctrl+1`을 보내는 보조 스크립트입니다. NX Tether 단축키 설정이 다르면 스크립트의 `SendKeys` 값을 조정해야 합니다.
+
+### 프리뷰 소스
+
+프리뷰는 프론트엔드에서 `navigator.mediaDevices.getUserMedia`로 처리합니다. 운영 PC에서는 `http://localhost:5173`에서 실행하는 것이 가장 안정적입니다. 브라우저는 보통 `localhost` 또는 HTTPS가 아닌 일반 LAN HTTP 주소에서 카메라 권한을 제한합니다.
 
 ---
 
 ## 로컬 네트워크 QR 테스트
 
-휴대폰에서 QR을 열려면 `localhost`가 아니라 서버 PC의 Wi-Fi IP를 써야 합니다.
+휴대폰에서 QR을 열려면 QR URL에 `localhost`가 아니라 서버 PC의 Wi-Fi 또는 핫스팟 IP가 들어가야 합니다.
 
 1. 노트북과 휴대폰을 같은 Wi-Fi 또는 핫스팟에 연결합니다.
 2. 노트북에서 `ipconfig`를 실행해 Wi-Fi IPv4 주소를 확인합니다.
-3. `.env`를 수정합니다.
+3. 루트 `.env`를 수정합니다.
 
 ```text
 PUBLIC_BASE_URL=http://{노트북_IP}:8000
@@ -157,6 +179,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 6. 휴대폰에서 `http://{노트북_IP}:8000/health`가 열리는지 확인합니다.
 
+프리뷰를 쓰는 운영 화면은 PC의 `localhost:5173`에서 열고, QR을 스캔하는 휴대폰은 백엔드의 최종 이미지 URL만 열면 됩니다.
+
 ---
 
 ## 설정
@@ -166,11 +190,15 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 | `APP_NAME` | `reshot` | FastAPI 앱 이름 |
 | `ENVIRONMENT` | `development` | 실행 환경 이름 |
 | `PUBLIC_BASE_URL` | `http://localhost:8000` | QR에 들어갈 공개 백엔드 URL |
-| `FRONTEND_ORIGINS` | `http://localhost:5173` | CORS 허용 프론트엔드 주소 |
+| `FRONTEND_ORIGINS` | `http://localhost:5173` | CORS 허용 프론트엔드 주소 목록 |
 | `CAPTURES_DIR` | `captures` | 촬영 원본 저장 경로 |
 | `OUTPUT_DIR` | `output/sessions` | 최종 이미지, QR, 세션 메타데이터 저장 경로 |
 | `ASSETS_DIR` | `assets` | 프레임 템플릿과 고정 자산 경로 |
-| `CAMERA_MODE` | `dummy` | 카메라 처리 모드 |
+| `CAMERA_MODE` | `dummy` | `dummy` 또는 `watch_folder` |
+| `CAMERA_WATCH_DIR` | 비어 있음 | `watch_folder` 모드에서 감시할 JPG 저장 폴더 |
+| `CAMERA_CAPTURE_TIMEOUT_SECONDS` | `20` | 새 촬영 파일을 기다릴 최대 시간 |
+| `CAMERA_TRIGGER_COMMAND` | 비어 있음 | 촬영 요청 전에 실행할 선택 명령 |
+| `CAMERA_TRIGGER_TIMEOUT_SECONDS` | `5` | 트리거 명령 제한 시간 |
 | `VITE_API_BASE_URL` | `http://localhost:8000` | 프론트엔드가 호출할 백엔드 주소 |
 
 ---
@@ -180,22 +208,25 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```text
 reshot/
 ├── frontend/                 React + Vite UI
+│   ├── .env.example          프론트엔드 API 주소 예시
 │   └── src/
 │       ├── api/              백엔드 API 클라이언트
-│       ├── components/       촬영, 선택, QR 화면 컴포넌트
+│       ├── components/       프리뷰, 촬영, 선택, QR 컴포넌트
 │       └── App.tsx           화면 라우팅과 플로우 제어
 ├── backend/                  FastAPI 서버
 │   └── app/
 │       ├── api/              HTTP 라우트
-│       ├── camera/           dummy/watch_folder/Nikon 카메라 모드
+│       ├── camera/           dummy/watch_folder/Nikon 카메라 어댑터
 │       ├── image/            템플릿, 레이아웃, 크롭 처리
 │       ├── models/           세션 응답 모델
 │       └── services/         세션, 촬영, 합성, QR 서비스
 ├── assets/
-│   ├── frames/               4컷 템플릿 JSON
+│   ├── frames/               4컷 템플릿 JSON, 로고
+│   ├── fonts/                합성 텍스트용 폰트
 │   └── old-photos/           기본 합성 fallback 자산
 ├── captures/                 세션별 촬영 원본
 ├── output/sessions/          세션별 final.jpg, qr.png, session.json
+├── tools/                    현장 운영 보조 스크립트
 ├── README.md
 └── ROADMAP.md
 ```
@@ -207,10 +238,10 @@ reshot/
 | 메서드 | 경로 | 역할 |
 | --- | --- | --- |
 | `GET` | `/` | 기본 상태 확인 |
-| `GET` | `/health` | 서버 상태, 카메라 모드, 경로 확인 |
+| `GET` | `/health` | 서버 상태, 카메라 모드, 저장 경로 확인 |
 | `POST` | `/sessions` | 새 촬영 세션 생성 |
 | `GET` | `/sessions/{session_id}` | 세션 메타데이터 조회 |
-| `POST` | `/sessions/{session_id}/capture` | 지정 slot의 사진 촬영 또는 dummy 생성 |
+| `POST` | `/sessions/{session_id}/capture` | 지정 slot 사진 촬영 또는 dummy 생성 |
 | `GET` | `/sessions/{session_id}/capture/{slot}` | 촬영 원본 이미지 조회 |
 | `GET` | `/old-photos/{slot}` | 기본 과거 사진 조회 |
 | `POST` | `/sessions/{session_id}/compose` | 선택한 4장으로 최종 이미지 합성 및 QR 생성 |
@@ -230,7 +261,7 @@ $session = Invoke-RestMethod -Method Post http://127.0.0.1:8000/sessions -Conten
 Invoke-RestMethod -Method Post "http://127.0.0.1:8000/sessions/$($session.session_id)/compose" -ContentType "application/json" -Body '{"template_id":"default","selected_capture_slots":[1,3,5,7]}'
 ```
 
-`selected_capture_slots`는 반드시 4개이고, 1부터 8까지의 중복 없는 slot 번호여야 합니다.
+`selected_capture_slots`는 반드시 4개여야 하고, 1부터 8까지의 중복 없는 slot 번호여야 합니다.
 
 ---
 
@@ -242,9 +273,10 @@ Invoke-RestMethod -Method Post "http://127.0.0.1:8000/sessions/$($session.sessio
 - 사진 슬롯: `518 x 744` 4개
 - 배경: `#000000`
 - 로고: `assets/frames/mpnu-logo.png`
+- 텍스트: `매직PNU 홈커밍 26.07.04`
 - 저장 형식: JPEG quality 92
 
-현재 UI에서는 사용자가 고른 4장의 촬영 이미지를 템플릿의 4개 슬롯에 순서대로 배치합니다. `selected_capture_slots`를 보내지 않는 경우에는 기존 fallback 경로인 고정 과거 사진 2장과 현재 사진 2장을 사용합니다.
+선택 합성에서는 사용자가 고른 4장의 촬영 이미지를 템플릿 슬롯 순서대로 배치합니다. 각 원본은 슬롯 크기에 맞게 중앙 크롭됩니다.
 
 ---
 
@@ -253,24 +285,25 @@ Invoke-RestMethod -Method Post "http://127.0.0.1:8000/sessions/$($session.sessio
 구현됨:
 
 - React/Vite 기반 시작, 촬영, 선택, 결과 화면
+- 브라우저 카메라 또는 HDMI 캡처 장치 라이브 프리뷰
 - FastAPI 기반 세션/촬영/합성/QR API
+- `dummy` 카메라 모드
+- `watch_folder` 카메라 모드와 선택 트리거 명령
 - 8장 촬영 플로우
 - 8장 중 4장 선택 UI
 - 선택한 4장으로 최종 이미지 합성
 - 결과 화면의 세로형 이미지 프레임과 하단 QR/처음 버튼
 - QR 모달 표시
-- 한국어 버튼 텍스트 깨짐 방지
 - 로컬 네트워크 QR 설정 절차
 
 아직 남은 일:
 
-- 실제 Nikon 직접 제어 안정화
-- watch folder 운영 검증
-- 브라우저 실시간 카메라 프리뷰 연결
-- 관리자 화면
-- 세션 정리/보존 정책
-- 행사 운영용 오류 복구 UI
-- 모바일 기기별 QR 다운로드 검증
+- 실제 행사 환경에서 반복 리허설
+- `watch_folder`와 NX Tether 조합의 장시간 안정성 검증
+- Nikon 직접 제어 어댑터 구현 여부 결정
+- 촬영 실패 후 재시도와 복구 UI
+- iPhone/Android QR 열기와 이미지 저장 검증
+- 세션 정리, 보존 정책, 운영자 화면
 
 ---
 
@@ -288,4 +321,4 @@ Invoke-RestMethod -Method Post "http://127.0.0.1:8000/sessions/$($session.sessio
 
 ## 라이선스
 
-현재 저장소에는 라이선스 파일이 없습니다. 공개 또는 배포 전에 `LICENSE` 파일을 추가하고 사용 범위를 결정해야 합니다.
+현재 저장소에는 라이선스 파일이 없습니다. 공개 또는 배포 전 `LICENSE` 파일을 추가하고 사용 범위를 결정해야 합니다.
